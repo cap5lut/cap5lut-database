@@ -1,9 +1,6 @@
 package net.cap5lut.database;
 
-import net.cap5lut.util.function.BiConsumerEx;
-
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Instant;
@@ -15,14 +12,14 @@ import java.util.stream.LongStream;
  *
  * @param <S> actual statement type.
  */
-public interface ParameterSingleSetterStatement<S> {
+public interface ParameterSingleSetter<S> {
     /**
      * Adds a parameter setter.
      *
      * @param setter parameter setter
      * @return itself for method chaining
      */
-    S addParameter(BiConsumerEx<PreparedStatement, Integer, SQLException> setter);
+    S addParameter(SQLBiConsumer<PreparedStatement, Integer> setter);
 
     /**
      * Adds a parameter.
@@ -136,7 +133,7 @@ public interface ParameterSingleSetterStatement<S> {
      * @return itself for method chaining
      */
     default S addParameter(Long value) {
-        return value == null ? addNullParameter(Types.INTEGER) : addParameter(value.longValue());
+        return value == null ? addNullParameter(Types.BIGINT) : addParameter(value.longValue());
     }
 
     /**
@@ -170,8 +167,28 @@ public interface ParameterSingleSetterStatement<S> {
      * @param value parameter
      * @return itself for method chaining
      */
+    default S addParameter(Float value) {
+        return value == null ? addNullParameter(Types.FLOAT) : addParameter(value.floatValue());
+    }
+
+    /**
+     * Adds a parameter.
+     *
+     * @param value parameter
+     * @return itself for method chaining
+     */
     default S addParameter(double value) {
         return addParameter((row, index) -> row.setDouble(index, value));
+    }
+
+    /**
+     * Adds a parameter.
+     *
+     * @param value parameter
+     * @return itself for method chaining
+     */
+    default S addParameter(Double value) {
+        return value == null ? addNullParameter(Types.DOUBLE) : addParameter(value.doubleValue());
     }
 
     /**

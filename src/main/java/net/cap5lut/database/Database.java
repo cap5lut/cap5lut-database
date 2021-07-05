@@ -1,9 +1,6 @@
 package net.cap5lut.database;
 
-import net.cap5lut.util.function.FunctionEx;
-
 import javax.sql.DataSource;
-import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
@@ -73,5 +70,5 @@ public interface Database {
      * @param <T> transaction result type
      * @return context result
      */
-    <T> CompletableFuture<T> transaction(FunctionEx<TransactionContext, T, SQLException> context);
+    <T> CompletableFuture<T> transaction(SQLFunction<TransactionContext, T> context);
 }

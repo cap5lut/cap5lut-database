@@ -1,7 +1,5 @@
 package net.cap5lut.database;
 
-import net.cap5lut.util.function.FunctionEx;
-
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -18,7 +16,7 @@ public interface SyncBatchStatement extends ParameterBatchSetterStatement<SyncBa
      * @param <T> result type
      * @return stream of all rows
      */
-    <T> Stream<T> execute(FunctionEx<ResultSet, T, SQLException> reader) throws SQLException;
+    <T> Stream<T> execute(SQLFunction<ResultSet, T> reader) throws SQLException;
 
     /**
      * Executes the batch statement.

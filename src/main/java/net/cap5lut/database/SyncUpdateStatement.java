@@ -1,7 +1,5 @@
 package net.cap5lut.database;
 
-import net.cap5lut.util.function.FunctionEx;
-
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -9,7 +7,7 @@ import java.sql.SQLException;
 /**
  * Synchronous update statement.
  */
-public interface SyncUpdateStatement extends ParameterSingleSetterStatement<SyncUpdateStatement> {
+public interface SyncUpdateStatement extends ParameterSingleSetter<SyncUpdateStatement> {
     /**
      * Executes the update statement.
      *
@@ -25,5 +23,5 @@ public interface SyncUpdateStatement extends ParameterSingleSetterStatement<Sync
      * @param <T> result type
      * @return result
      */
-    <T> T execute(FunctionEx<ResultSet, T, SQLException> reader) throws SQLException;
+    <T> T execute(SQLFunction<ResultSet, T> reader) throws SQLException;
 }

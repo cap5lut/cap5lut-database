@@ -1,9 +1,5 @@
 package net.cap5lut.database;
 
-import net.cap5lut.util.function.BiConsumerEx;
-import net.cap5lut.util.function.FunctionEx;
-import net.cap5lut.util.function.SupplierEx;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -22,22 +18,22 @@ public class DefaultAsyncSelectStatement implements AsyncSelectStatement {
     /**
      * Internal statement executor.
      */
-    private final ExecutorService executor;
+    protected final ExecutorService executor;
 
     /**
      * Internal connection supplier.
      */
-    private final SupplierEx<Connection, SQLException> connection;
+    protected final SQLSupplier<Connection> connection;
 
     /**
      * SQL statement.
      */
-    private final String sql;
+    protected final String sql;
 
     /**
      * Parameter setters.
      */
-    private final List<BiConsumerEx<PreparedStatement, Integer, SQLException>> setters = new ArrayList<>();
+    protected final List<SQLBiConsumer<PreparedStatement, Integer>> setters = new ArrayList<>();
 
     /**
      * Creates a new instance.
@@ -46,7 +42,7 @@ public class DefaultAsyncSelectStatement implements AsyncSelectStatement {
      * @param connection connection supplier
      * @param sql SQL statement
      */
-    public DefaultAsyncSelectStatement(ExecutorService executor, SupplierEx<Connection, SQLException> connection,
+    public DefaultAsyncSelectStatement(ExecutorService executor, SQLSupplier<Connection> connection,
                                        String sql) {
         this.executor = executor;
         this.connection = connection;
@@ -57,7 +53,7 @@ public class DefaultAsyncSelectStatement implements AsyncSelectStatement {
      * {@inheritDoc}
      */
     @Override
-    public DefaultAsyncSelectStatement addParameter(BiConsumerEx<PreparedStatement, Integer, SQLException> setter) {
+    public DefaultAsyncSelectStatement addParameter(SQLBiConsumer<PreparedStatement, Integer> setter) {
         setters.add(setter);
         return this;
     }
@@ -66,7 +62,7 @@ public class DefaultAsyncSelectStatement implements AsyncSelectStatement {
      * {@inheritDoc}
      */
     @Override
-    public <T> CompletableFuture<Stream<T>> execute(FunctionEx<ResultSet, T, SQLException> reader) {
+    public <T> CompletableFuture<Stream<T>> execute(SQLFunction<ResultSet, T> reader) {
         return CompletableFuture.supplyAsync(
             () -> {
                 try (final var connection = this.connection.get()) {

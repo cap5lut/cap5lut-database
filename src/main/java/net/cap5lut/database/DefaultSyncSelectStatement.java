@@ -1,8 +1,5 @@
 package net.cap5lut.database;
 
-import net.cap5lut.util.function.BiConsumerEx;
-import net.cap5lut.util.function.FunctionEx;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -18,17 +15,17 @@ public class DefaultSyncSelectStatement implements SyncSelectStatement {
     /**
      * Internal connection.
      */
-    private final Connection connection;
+    protected final Connection connection;
 
     /**
      * SQL statement.
      */
-    private final String sql;
+    protected final String sql;
 
     /**
      * Parameter setters.
      */
-    private final List<BiConsumerEx<PreparedStatement, Integer, SQLException>> setters = new ArrayList<>();
+    protected final List<SQLBiConsumer<PreparedStatement, Integer>> setters = new ArrayList<>();
 
     /**
      * Creates a new instance.
@@ -45,7 +42,7 @@ public class DefaultSyncSelectStatement implements SyncSelectStatement {
      * {@inheritDoc}
      */
     @Override
-    public SyncSelectStatement addParameter(BiConsumerEx<PreparedStatement, Integer, SQLException> setter) {
+    public SyncSelectStatement addParameter(SQLBiConsumer<PreparedStatement, Integer> setter) {
         setters.add(setter);
         return this;
     }
@@ -54,7 +51,7 @@ public class DefaultSyncSelectStatement implements SyncSelectStatement {
      * {@inheritDoc}
      */
     @Override
-    public <T> Stream<T> execute(FunctionEx<ResultSet, T, SQLException> reader) throws SQLException {
+    public <T> Stream<T> execute(SQLFunction<ResultSet, T> reader) throws SQLException {
         try (final var statement = connection.prepareStatement(sql)) {
             var index = 0;
             for (final var setter: setters) {

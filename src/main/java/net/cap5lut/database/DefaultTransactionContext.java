@@ -60,22 +60,6 @@ public class DefaultTransactionContext implements TransactionContext {
      * {@inheritDoc}
      */
     @Override
-    public Savepoint savepoint() throws SQLException {
-        return connection.setSavepoint();
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public Savepoint savepoint(String name) throws SQLException {
-        return connection.setSavepoint(name);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public void commit() throws SQLException {
         connection.commit();
     }
@@ -94,5 +78,21 @@ public class DefaultTransactionContext implements TransactionContext {
     @Override
     public void rollback(Savepoint savepoint) throws SQLException {
         connection.rollback(savepoint);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Savepoint savepoint() throws SQLException {
+        return connection.setSavepoint();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public Savepoint savepoint(String name) throws SQLException {
+        return connection.setSavepoint(name);
     }
 }

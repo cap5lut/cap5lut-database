@@ -1,10 +1,7 @@
 package net.cap5lut.database;
 
-import net.cap5lut.util.function.FunctionEx;
-
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
@@ -19,7 +16,7 @@ public interface AsyncBatchStatement extends ParameterBatchSetterStatement<Async
      * @param <T> result type
      * @return stream of all rows
      */
-    <T> CompletableFuture<Stream<T>> execute(FunctionEx<ResultSet, T, SQLException> reader);
+    <T> CompletableFuture<Stream<T>> execute(SQLFunction<ResultSet, T> reader);
 
     /**
      * Executes the batch statement.

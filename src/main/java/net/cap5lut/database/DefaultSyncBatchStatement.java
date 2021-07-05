@@ -1,8 +1,5 @@
 package net.cap5lut.database;
 
-import net.cap5lut.util.function.ConsumerEx;
-import net.cap5lut.util.function.FunctionEx;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -18,17 +15,17 @@ public class DefaultSyncBatchStatement implements SyncBatchStatement {
     /**
      * Internal connection.
      */
-    private final Connection connection;
+    protected final Connection connection;
 
     /**
      * SQL statement.
      */
-    private final String sql;
+    protected final String sql;
 
     /**
      * Parameter setters.
      */
-    private final List<ConsumerEx<PreparedStatement, SQLException>> setters = new ArrayList<>();
+    protected final List<SQLConsumer<PreparedStatement>> setters = new ArrayList<>();
 
     /**
      * Creates a new instance.
@@ -45,7 +42,7 @@ public class DefaultSyncBatchStatement implements SyncBatchStatement {
      * {@inheritDoc}
      */
     @Override
-    public SyncBatchStatement add(ConsumerEx<PreparedStatement, SQLException> setter) {
+    public SyncBatchStatement add(SQLConsumer<PreparedStatement> setter) {
         setters.add(setter);
         return this;
     }
@@ -54,16 +51,7 @@ public class DefaultSyncBatchStatement implements SyncBatchStatement {
      * {@inheritDoc}
      */
     @Override
-    public SyncBatchStatement add(Batch batch) {
-        setters.add(batch::set);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public <T> Stream<T> execute(FunctionEx<ResultSet, T, SQLException> reader) throws SQLException {
+    public <T> Stream<T> execute(SQLFunction<ResultSet, T> reader) throws SQLException {
         final var stream = Stream.<T>builder();
         for (final var setter: setters) {
             try (final var statement = connection.prepareStatement(sql)) {

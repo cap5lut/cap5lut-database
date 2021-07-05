@@ -110,8 +110,6 @@ database
 ```
 
 ## ToDo
-- transactions should, if they failed, roll back automatically 
-- add more data types to Batch
 - unit and integration tests
 - simple connection pool
 - publishing

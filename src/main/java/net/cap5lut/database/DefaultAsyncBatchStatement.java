@@ -1,9 +1,5 @@
 package net.cap5lut.database;
 
-import net.cap5lut.util.function.ConsumerEx;
-import net.cap5lut.util.function.FunctionEx;
-import net.cap5lut.util.function.SupplierEx;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -18,26 +14,26 @@ import java.util.stream.Stream;
 /**
  * Default {@link AsyncBatchStatement} implementation.
  */
-public class DefaultAsyncBatchUpdateStatement implements AsyncBatchStatement {
+public class DefaultAsyncBatchStatement implements AsyncBatchStatement {
     /**
      * Internal statement executor.
      */
-    private final ExecutorService executor;
+    protected final ExecutorService executor;
 
     /**
      * Internal connection supplier.
      */
-    private final SupplierEx<Connection, SQLException> connection;
+    protected final SQLSupplier<Connection> connection;
 
     /**
      * SQL statement.
      */
-    private final String sql;
+    protected final String sql;
 
     /**
      * Batch setters.
      */
-    private final List<ConsumerEx<PreparedStatement, SQLException>> setters = new ArrayList<>();
+    protected final List<SQLConsumer<PreparedStatement>> setters = new ArrayList<>();
 
     /**
      * Creates a new instance.
@@ -46,8 +42,8 @@ public class DefaultAsyncBatchUpdateStatement implements AsyncBatchStatement {
      * @param connection connection supplier
      * @param sql SQL statement
      */
-    public DefaultAsyncBatchUpdateStatement(ExecutorService executor, SupplierEx<Connection, SQLException> connection,
-                                            String sql) {
+    public DefaultAsyncBatchStatement(ExecutorService executor, SQLSupplier<Connection> connection,
+                                      String sql) {
         this.executor = executor;
         this.connection = connection;
         this.sql = sql;
@@ -57,7 +53,7 @@ public class DefaultAsyncBatchUpdateStatement implements AsyncBatchStatement {
      * {@inheritDoc}
      */
     @Override
-    public AsyncBatchStatement add(ConsumerEx<PreparedStatement, SQLException> setter) {
+    public AsyncBatchStatement add(SQLConsumer<PreparedStatement> setter) {
         setters.add(setter);
         return this;
     }
@@ -66,16 +62,7 @@ public class DefaultAsyncBatchUpdateStatement implements AsyncBatchStatement {
      * {@inheritDoc}
      */
     @Override
-    public AsyncBatchStatement add(Batch batch) {
-        setters.add(batch::set);
-        return this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public <T> CompletableFuture<Stream<T>> execute(FunctionEx<ResultSet, T, SQLException> reader) {
+    public <T> CompletableFuture<Stream<T>> execute(SQLFunction<ResultSet, T> reader) {
         return CompletableFuture.supplyAsync(
             () -> {
                 try (final var connection = this.connection.get()) {

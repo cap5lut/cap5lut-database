@@ -1,7 +1,5 @@
 package net.cap5lut.database;
 
-import net.cap5lut.util.function.FunctionEx;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.stream.Stream;
@@ -9,7 +7,7 @@ import java.util.stream.Stream;
 /**
  * Synchronous select statement.
  */
-public interface SyncSelectStatement extends ParameterSingleSetterStatement<SyncSelectStatement> {
+public interface SyncSelectStatement extends ParameterSingleSetter<SyncSelectStatement> {
     /**
      * Executes the select statement.
      *
@@ -17,5 +15,5 @@ public interface SyncSelectStatement extends ParameterSingleSetterStatement<Sync
      * @param <T> result type
      * @return stream of all rows
      */
-    <T> Stream<T> execute(FunctionEx<ResultSet, T, SQLException> reader) throws SQLException;
+    <T> Stream<T> execute(SQLFunction<ResultSet, T> reader) throws SQLException;
 }

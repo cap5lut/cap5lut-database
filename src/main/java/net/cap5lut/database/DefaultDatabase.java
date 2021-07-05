@@ -1,7 +1,5 @@
 package net.cap5lut.database;
 
-import net.cap5lut.util.function.FunctionEx;
-
 import javax.sql.DataSource;
 import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
@@ -74,18 +72,24 @@ public class DefaultDatabase implements Database {
      */
     @Override
     public AsyncBatchStatement batch(String sql) {
-        return new DefaultAsyncBatchUpdateStatement(executor, dataSource::getConnection, sql);
+        return new DefaultAsyncBatchStatement(executor, dataSource::getConnection, sql);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public <T> CompletableFuture<T> transaction(FunctionEx<TransactionContext, T, SQLException> context) {
+    public <T> CompletableFuture<T> transaction(SQLFunction<TransactionContext, T> transaction) {
         return CompletableFuture.supplyAsync(() -> {
             try (final var connection = dataSource.getConnection()) {
                 connection.setAutoCommit(false);
-                return context.apply(new DefaultTransactionContext(connection));
+                final var savepoint = connection.setSavepoint();
+                try {
+                    return transaction.apply(new DefaultTransactionContext(connection));
+                } catch (SQLException e) {
+                    connection.rollback(savepoint);
+                    throw new CompletionException(e);
+                }
             } catch (SQLException e) {
                 throw new CompletionException(e);
             }
