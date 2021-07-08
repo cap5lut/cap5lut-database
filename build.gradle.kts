@@ -11,7 +11,6 @@ repositories {
 }
 
 dependencies {
-    testImplementation("com.h2database", "h2", "1.4.200")
     testImplementation("io.zonky.test", "embedded-postgres", "1.3.0")
     testImplementation("org.junit.jupiter", "junit-jupiter-api", "5.7.1")
     testImplementation("org.mockito", "mockito-core", "3.11.2")
@@ -26,7 +25,7 @@ java {
     modularity.inferModulePath.set(true)
 }
 
-tasks.test {
+tasks.getByName<Test>("test") {
     useJUnitPlatform()
     finalizedBy(tasks.jacocoTestReport)
 }

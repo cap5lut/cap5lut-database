@@ -1,8 +1,15 @@
 # cap5lut-database
 
-***This library is still WIP!***
+This library is a lightweight wrapper for JDBC to avoid boilerplate. Additionally, all interactions with the database are asynchronous.
 
-This library is a small wrapper for JDBC to avoid boilerplate. Additionally, all interactions with the database are asynchronous.
+## Current state
+- this library is still **work in progress**
+- *currently* the design in based on interactions with a PostgreSQL database, it is planned to support other DBMS' which work differently (if anything is not supported, please create an issue stating the DBMS and what you try to achieve)
+
+## ToDo
+- update README with badges regarding the current state
+- providing a simple connection pool
+- publishing to maven central
 
 ## Prerequisites
 - Java 11
@@ -108,8 +115,3 @@ database
         return null;
     });
 ```
-
-## ToDo
-- unit and integration tests
-- simple connection pool
-- publishing
