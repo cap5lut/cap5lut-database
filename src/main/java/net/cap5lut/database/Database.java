@@ -1,5 +1,7 @@
 package net.cap5lut.database;
 
+import com.zaxxer.hikari.HikariDataSource;
+
 import javax.sql.DataSource;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -8,7 +10,12 @@ import java.util.concurrent.ForkJoinPool;
 /**
  * Database.
  */
-public interface Database {
+public interface Database extends AutoCloseable {
+    /**
+     * HikariCP {@link DataSource} class name.
+     */
+    String HIKARICP_DATASOURCE_CLASS_NAME = "com.zaxxer.hikari.HikariDataSource";
+
     /**
      * Gets a {@link Database} instance of a given {@link DataSource}.
      *
@@ -17,7 +24,13 @@ public interface Database {
      * @return new {@link Database} instance
      */
     static Database of(DataSource dataSource, ExecutorService executor) {
-        return new DefaultDatabase(dataSource, executor);
+        Runnable shutdownAction = null;
+        switch (dataSource.getClass().getCanonicalName()) {
+            case HIKARICP_DATASOURCE_CLASS_NAME:
+                shutdownAction = ((HikariDataSource) dataSource)::close;
+                break;
+        }
+        return new DefaultDatabase(dataSource, executor, shutdownAction);
     }
 
     /**
@@ -71,4 +84,10 @@ public interface Database {
      * @return context result
      */
     <T> CompletableFuture<T> transaction(SQLFunction<TransactionContext, T> context);
+
+    /**
+     * Closes the database.
+     */
+    @Override
+    void close();
 }

@@ -1,60 +1,59 @@
 package net.cap5lut.database;
 
-import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ForkJoinPool;
 
 import static net.cap5lut.database.Assertions.assertThrowsWithCause;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class DefaultAsyncSelectStatementTest {
-    TestDatabase database;
+    @Test
+    void addParameter() throws SQLException {
+        final var resultSet = mock(ResultSet.class);
+        when(resultSet.next()).thenReturn(true).thenReturn(false);
+        when(resultSet.getInt(1)).thenReturn(5);
 
-    @BeforeEach
-    void beforeEach() {
-        database = TestDatabase.newInstance();
-    }
+        final var statement = mock(PreparedStatement.class);
+        when(statement.executeQuery()).thenReturn(resultSet);
 
-    @AfterEach
-    void afterAll() {
-        database.close();
-        database = null;
+        final var connection = mock(Connection.class);
+        when(connection.prepareStatement(anyString())).thenReturn(statement);
+
+        assertEquals(
+                5,
+                new DefaultAsyncSelectStatement(ForkJoinPool.commonPool(), () -> connection, "SELECT ?;")
+                        .addParameter(5)
+                        .execute(row -> row.getInt(1))
+                        .join()
+                        .findFirst()
+                        .orElseThrow()
+        );
     }
 
     @Test
-    void addParameter() throws IOException {
-        try (final var pg = EmbeddedPostgres.start()) {
-            assertEquals(
-                    5,
-                    new DefaultAsyncSelectStatement(
-                            ForkJoinPool.commonPool(),
-                            database.getDataSource()::getConnection,
-                            "SELECT ?;"
-                    )
-                            .addParameter(5)
-                            .execute(row -> row.getInt(1))
-                            .join()
-                            .findFirst()
-                            .orElseThrow()
-            );
-        }
-    }
+    void execute() throws SQLException {
+        final var resultSet = mock(ResultSet.class);
+        when(resultSet.next()).thenReturn(true).thenReturn(false);
+        when(resultSet.getInt(1)).thenReturn(1);
 
-    @Test
-    void execute() {
+        final var statement = mock(PreparedStatement.class);
+        when(statement.executeQuery()).thenReturn(resultSet);
+
+        final var connection = mock(Connection.class);
+        when(connection.prepareStatement(anyString())).thenReturn(statement);
+
         assertEquals(
                 1,
-                new DefaultAsyncSelectStatement(
-                        ForkJoinPool.commonPool(),
-                        database.getDataSource()::getConnection,
-                        "SELECT 1;"
-                )
+                new DefaultAsyncSelectStatement(ForkJoinPool.commonPool(), () -> connection, "SELECT 1;")
                         .execute(row -> row.getInt(1))
                         .join()
                         .findFirst()
@@ -69,7 +68,9 @@ class DefaultAsyncSelectStatementTest {
                 SQLException.class,
                 () -> new DefaultAsyncSelectStatement(
                         ForkJoinPool.commonPool(),
-                        TestDatabase.newBrokenConnectionFactory(),
+                        () -> {
+                            throw new SQLException();
+                        },
                         "SELECT 1;"
                 )
                         .execute(row -> row.getInt(1))

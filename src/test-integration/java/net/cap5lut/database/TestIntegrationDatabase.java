@@ -8,10 +8,10 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.concurrent.ForkJoinPool;
 
-public final class TestDatabase extends DefaultDatabase implements AutoCloseable {
-    public static TestDatabase newInstance() {
+public final class TestIntegrationDatabase extends DefaultDatabase {
+    public static TestIntegrationDatabase newInstance() {
         try {
-            final var database = new TestDatabase();
+            final var database = new TestIntegrationDatabase();
             database.create("CREATE TABLE test_table (id INT);").join();
             return database;
         } catch (IOException e) {
@@ -27,25 +27,22 @@ public final class TestDatabase extends DefaultDatabase implements AutoCloseable
 
     private final EmbeddedPostgres pg;
 
-    protected TestDatabase(EmbeddedPostgres pg) {
-        super(pg.getPostgresDatabase(), ForkJoinPool.commonPool());
+    private TestIntegrationDatabase(EmbeddedPostgres pg) {
+        super(pg.getPostgresDatabase(), ForkJoinPool.commonPool(), () -> {
+            try {
+                pg.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
         this.pg = pg;
     }
 
-    protected TestDatabase() throws IOException {
+    private TestIntegrationDatabase() throws IOException {
         this(EmbeddedPostgres.start());
     }
 
     public DataSource getDataSource() {
         return pg.getPostgresDatabase();
-    }
-
-    @Override
-    public void close() {
-        try {
-            pg.close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 }

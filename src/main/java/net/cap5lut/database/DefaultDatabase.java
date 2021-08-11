@@ -21,14 +21,20 @@ public class DefaultDatabase implements Database {
     protected final DataSource dataSource;
 
     /**
+     * Close action.
+     */
+    protected final Runnable closeAction;
+
+    /**
      * Creates a new instance.
      *
      * @param dataSource data source
      * @param executor statement executor
      */
-    public DefaultDatabase(DataSource dataSource, ExecutorService executor) {
+    public DefaultDatabase(DataSource dataSource, ExecutorService executor, Runnable closeAction) {
         this.dataSource = dataSource;
         this.executor = executor;
+        this.closeAction = closeAction;
     }
 
     /**
@@ -94,5 +100,15 @@ public class DefaultDatabase implements Database {
                 throw new CompletionException(e);
             }
         });
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void close() {
+        if (closeAction != null) {
+            closeAction.run();
+        }
     }
 }

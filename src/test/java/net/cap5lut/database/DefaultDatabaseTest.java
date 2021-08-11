@@ -1,49 +1,82 @@
 package net.cap5lut.database;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static net.cap5lut.database.Assertions.assertThrowsWithCause;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class DefaultDatabaseTest {
-    DefaultDatabase database;
-
-    @BeforeEach
-    void beforeEach() {
-        database = TestDatabase.newInstance();
-    }
-
-    @AfterEach
-    void afterAll() {
-        ((TestDatabase) database).close();
-        database = null;
-    }
-
     @Test
-    void create() {
-        database.create("DROP TABLE test_table;").join();
+    void create() throws SQLException {
+        final var statement = mock(Statement.class);
+
+        final var connection = mock(Connection.class);
+        when(connection.createStatement()).thenReturn(statement);
+
+        final var dataSource = mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        new DefaultDatabase(dataSource, ForkJoinPool.commonPool(), null)
+                .create("DROP TABLE test_table;")
+                .join();
     }
 
     @Test
     void create_throws_exception() {
-        assertThrowsWithCause(CompletionException.class, SQLException.class, () -> database.create("DROP TABLE not_existing_table;").join());
+        assertThrowsWithCause(
+                CompletionException.class,
+                SQLException.class,
+                () -> {
+                    final var statement = mock(Statement.class);
+                    when(statement.execute(anyString())).thenThrow(SQLException.class);
+
+                    final var connection = mock(Connection.class);
+                    when(connection.createStatement()).thenReturn(statement);
+
+                    final var dataSource = mock(DataSource.class);
+                    when(dataSource.getConnection()).thenReturn(connection);
+
+                    new DefaultDatabase(dataSource, ForkJoinPool.commonPool(), null)
+                            .create("DROP TABLE not_existing_table;")
+                            .join();
+                });
     }
 
    @Test
-    void query() {
+    void query() throws SQLException {
+        final var resultSet = mock(ResultSet.class);
+        when(resultSet.next()).thenReturn(true).thenReturn(false);
+        when(resultSet.getString(1)).thenReturn("test");
+
+        final var statement = mock(PreparedStatement.class);
+        when(statement.executeQuery()).thenReturn(resultSet);
+
+        final var connection = mock(Connection.class);
+        when(connection.prepareStatement(anyString())).thenReturn(statement);
+
+        final var dataSource = mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
         assertEquals(
                 "test",
-                database.query("SELECT 'test';")
+                new DefaultDatabase(dataSource, ForkJoinPool.commonPool(), null)
+                        .query("SELECT 'test';")
                         .execute(row -> row.getString(1))
                         .join()
                         .findFirst()
@@ -52,131 +85,94 @@ class DefaultDatabaseTest {
     }
 
     @Test
-    void update() {
+    void update() throws SQLException {
+        final var statement = mock(PreparedStatement.class);
+        when(statement.executeUpdate()).thenReturn(1);
+
+        final var connection = mock(Connection.class);
+        when(connection.prepareStatement(anyString())).thenReturn(statement);
+
+        final var dataSource = mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
         assertEquals(
                 1,
-                database
+                new DefaultDatabase(dataSource, ForkJoinPool.commonPool(), null)
                         .update("INSERT INTO test_table (id) VALUES (?);")
                         .addParameter(5)
                         .execute()
                         .join()
         );
-        assertEquals(
-                5,
-                database
-                        .query("SELECT id FROM test_table;")
-                        .execute(row -> row.getInt(1))
-                        .join()
-                        .findFirst()
-                        .orElseThrow()
-        );
     }
 
     @Test
-    void batch() {
-        final var results = database
+    void batch() throws SQLException {
+        final var statement = mock(PreparedStatement.class);
+        when(statement.executeBatch()).thenReturn(new int[] {1, 1, 1});
+
+        final var connection = mock(Connection.class);
+        when(connection.prepareStatement(anyString())).thenReturn(statement);
+
+        final var dataSource = mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        final var results = new DefaultDatabase(dataSource, ForkJoinPool.commonPool(), null)
                 .batch("INSERT INTO test_table (id) VALUES (?);")
                 .add(new Batch().addParameter(1))
                 .add(new Batch().addParameter(2))
                 .add(new Batch().addParameter(3))
                 .executeBatch()
                 .join();
-        for (var result: results) {
-            assertEquals(1, result);
-        }
-        assertEquals(
-                3,
-                database
-                        .query("SELECT max(id) FROM test_table;")
-                        .execute(row -> row.getInt(1))
-                        .join()
-                        .findFirst()
-                        .orElseThrow()
-        );
+        assertArrayEquals(new int[] {1, 1, 1}, results);
     }
 
     @Test
-    void transaction() {
+    void transaction() throws SQLException {
+        final var statement = mock(PreparedStatement.class);
+        when(statement.executeUpdate()).thenReturn(1);
+
+        final var connection = mock(Connection.class);
+        when(connection.prepareStatement(anyString())).thenReturn(statement);
+
+        final var dataSource = mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
         final var expectedResult = new Object();
-        final var actualResult = database
+        final var actualResult = new DefaultDatabase(dataSource, ForkJoinPool.commonPool(), null)
                 .transaction(ctx -> {
-                    // fill
-                    final var results = ctx.batch("INSERT INTO test_table (id) VALUES (?);")
-                            .add(new Batch().addParameter(1))
-                            .add(new Batch().addParameter(2))
-                            .add(new Batch().addParameter(3))
-                            .executeBatch();
-                    for (var result : results) {
-                        assertEquals(1, result);
-                    }
-
-                    // read
-                    final var sum = ctx
-                            .query("SELECT sum(id) FROM test_table;")
-                            .execute(row -> row.getInt(1))
-                            .findFirst()
-                            .orElseThrow();
-
-                    // insert new and remove old
-                    ctx.update("INSERT INTO test_table (id) VALUES (?);")
-                            .addParameter(sum)
-                            .execute();
-                    ctx.update("DELETE FROM test_table WHERE id < ?;")
-                            .addParameter(sum)
-                            .execute();
-
-                    assertEquals(
-                            6,
-                            ctx
-                                    .query("SELECT sum(id) FROM test_table;")
-                                    .execute(row -> row.getInt(1))
-                                    .findFirst()
-                                    .orElseThrow()
-                    );
                     assertEquals(
                             1,
-                            ctx
-                                    .query("SELECT count(id) FROM test_table;")
-                                    .execute(row -> row.getInt(1))
-                                    .findFirst()
-                                    .orElseThrow()
+                            ctx.update("INSERT INTO test_table (value) VALUES (?);").addParameter(1).execute()
                     );
                     return expectedResult;
                 })
                 .join();
 
-        assertSame(
-                expectedResult,
-                actualResult
-        );
+        assertSame(expectedResult, actualResult);
     }
 
     @Test
-    public void transaction_rollbackOnError() {
-        database
-                .update("INSERT INTO test_table (id) VALUES (5);")
-                .execute()
-                .join();
-
+    public void transaction_rollbackOnError() throws SQLException {
         assertThrowsWithCause(
                 CompletionException.class,
                 SQLException.class,
-                () -> database
-                        .transaction(ctx -> {
-                            ctx.update("INSERT INTO test_table (id) VALUES 6;");
-                            throw new SQLException("test");
-                        })
-                        .join()
-        );
+                () -> {
+                    final var statement = mock(PreparedStatement.class);
+                    when(statement.executeUpdate()).thenThrow(SQLException.class);
 
-        assertEquals(
-                1,
-                database
-                        .query("SELECT count(*) FROM test_table;")
-                        .execute(row -> row.getInt(1))
-                        .join()
-                        .findFirst()
-                        .orElseThrow()
+                    final var connection = mock(Connection.class);
+                    when(connection.prepareStatement(anyString())).thenReturn(statement);
+
+                    final var dataSource = mock(DataSource.class);
+                    when(dataSource.getConnection()).thenReturn(connection);
+
+                    new DefaultDatabase(dataSource, ForkJoinPool.commonPool(), null)
+                            .transaction(ctx -> {
+                                ctx.update("INSERT INTO test_table (id) VALUES 6;").execute();
+                                return null;
+                            })
+                            .join();
+                }
         );
     }
 
@@ -184,10 +180,7 @@ class DefaultDatabaseTest {
     public void transaction_brokenConnection() throws SQLException {
         final var dataSource = mock(DataSource.class);
         when(dataSource.getConnection()).thenThrow(new SQLException("expected exception"));
-        var database = new DefaultDatabase(
-                dataSource,
-                ForkJoinPool.commonPool()
-        );
+        var database = new DefaultDatabase(dataSource, ForkJoinPool.commonPool(), null);
 
         assertThrowsWithCause(
                 CompletionException.class,
@@ -199,5 +192,14 @@ class DefaultDatabaseTest {
                         })
                         .join()
         );
+    }
+
+    @Test
+    public void close() {
+        new DefaultDatabase(null, null, null).close();
+
+        final var closeWasExecuted = new AtomicBoolean(false);
+        new DefaultDatabase(null, null, () -> closeWasExecuted.set(true)).close();
+        assertTrue(closeWasExecuted.get());
     }
 }

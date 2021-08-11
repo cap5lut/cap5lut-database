@@ -8,8 +8,9 @@ This library is a lightweight wrapper for JDBC to avoid boilerplate. Additionall
 
 ## ToDo
 - update README with badges regarding the current state
-- providing a simple connection pool
+- java multi version (check for jdk 1.8 compatibility)
 - publishing to maven central
+- [restructure internal classes for graceful shutdown (maybe builder pattern) ?]
 
 ## Prerequisites
 - Java 11

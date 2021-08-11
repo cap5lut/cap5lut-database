@@ -4,6 +4,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.sql.Array;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -13,11 +15,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class ParameterSingleSetterTest {
     ParameterSingleSetter<?> setter = new Batch();
@@ -156,8 +162,13 @@ class ParameterSingleSetterTest {
 
     @Test
     void addParameter_integer() throws SQLException {
+        final var array = mock(Array.class);
+        final var connection = mock(Connection.class);
+        when(connection.createArrayOf(anyString(), any())).thenReturn(array);
+
         final var executionCount = new AtomicInteger(0);
         final var statement = mock(PreparedStatement.class);
+        when(statement.getConnection()).thenReturn(connection);
         doAnswer(invocation -> {
             switch (invocation.getArgument(0, Integer.class)) {
                 case 1:
@@ -176,6 +187,7 @@ class ParameterSingleSetterTest {
         })
                 .when(statement)
                 .setInt(any(Integer.class), any(Integer.class));
+
         doAnswer(invocation -> {
             if (invocation.getArgument(0, Integer.class) == 3) {
                 assertEquals(Types.INTEGER, invocation.getArgument(1, Integer.class));
@@ -186,19 +198,38 @@ class ParameterSingleSetterTest {
             return null;
         })
                 .when(statement)
-                .setNull(any(Integer.class), any(Integer.class));
+                .setNull(anyInt(), anyInt());
+
+        doAnswer(invocation -> {
+            if (invocation.getArgument(0, Integer.class) == 4) {
+                assertSame(array, invocation.getArgument(1));
+                executionCount.incrementAndGet();
+            } else {
+                fail("invalid index");
+            }
+            return null;
+        })
+                .when(statement)
+                .setArray(anyInt(), any());
+
 
         setter.addParameter(0);
         setter.addParameter(Integer.valueOf(1));
         setter.addParameter((Integer) null);
+        setter.addParameter(new int[] {1, 2, 3});
         ((Batch) setter).accept(statement);
-        assertEquals(3, executionCount.get());
+        assertEquals(4, executionCount.get());
     }
 
     @Test
     void addParameter_long() throws SQLException {
+        final var array = mock(Array.class);
+        final var connection = mock(Connection.class);
+        when(connection.createArrayOf(anyString(), any())).thenReturn(array);
+
         final var executionCount = new AtomicInteger(0);
         final var statement = mock(PreparedStatement.class);
+        when(statement.getConnection()).thenReturn(connection);
         doAnswer(invocation -> {
             switch (invocation.getArgument(0, Integer.class)) {
                 case 1:
@@ -229,11 +260,24 @@ class ParameterSingleSetterTest {
                 .when(statement)
                 .setNull(any(Integer.class), any(Integer.class));
 
+        doAnswer(invocation -> {
+            if (invocation.getArgument(0, Integer.class) == 4) {
+                assertSame(array, invocation.getArgument(1));
+                executionCount.incrementAndGet();
+            } else {
+                fail("invalid index");
+            }
+            return null;
+        })
+                .when(statement)
+                .setArray(anyInt(), any());
+
         setter.addParameter(0L);
         setter.addParameter(Long.valueOf(1L));
         setter.addParameter((Long) null);
+        setter.addParameter(new long[] {1, 2, 3});
         ((Batch) setter).accept(statement);
-        assertEquals(3, executionCount.get());
+        assertEquals(4, executionCount.get());
     }
 
     @Test

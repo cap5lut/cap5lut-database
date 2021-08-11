@@ -2,8 +2,8 @@ package net.cap5lut.database;
 
 import org.junit.jupiter.api.function.Executable;
 
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public final class Assertions {
@@ -30,7 +30,7 @@ public final class Assertions {
     @SuppressWarnings("unchecked")
     public static <T extends Throwable, U extends Throwable> U assertThrowsWithCause(Class<T> expectedOuterType, Class<U> expectedCauseType, Executable action) {
         final var cause = assertThrows(expectedOuterType, action).getCause();
-        assertSame(expectedCauseType, cause.getClass());
+        assertTrue(expectedCauseType.isInstance(cause));
         return (U) cause;
     }
 
